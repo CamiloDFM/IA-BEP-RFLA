@@ -1,0 +1,17 @@
+# ignorar todo
+*
+
+# designorar cosas con extensiones
+!*.*
+
+# designorar todos los directorios
+!*/
+
+# ignorar objetos
+*.o
+
+# ignorar productos de compilar mal
+*.out
+
+# ignorar documentacion de apoyo
+*.pdf
