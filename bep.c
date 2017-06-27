@@ -6,7 +6,7 @@ int main(int argc, char* argv[]){
     // abrir el archivo con la instancia
     
     if (argc != 2){
-        printf("Este programa necesita recibir el nombre del archivo de la instancia como parametro (y nada mas!). Abortando...");
+        printf("Este programa necesita recibir el nombre del archivo de la instancia como parametro (y nada mas!). Abortando...\n");
         return 0;
     }
     
@@ -87,11 +87,94 @@ int main(int argc, char* argv[]){
     // cleanup
     fclose(instancia);
     
+    // declarar variables de busqueda: matriz tetradimensional de tamanyo nPuntos * nRefugios * nBuses * nRondas
+    // enfoque inicial: obtener cantidad de rondas desde la solucion trivial
+    // idea: asignar ordenadamente buses a puntos y refugios para establecer una cota superior
+    
+    // copiar arreglos de puntos y refugios para trabajar con una copia local
+    int* auxP = (int*)malloc(sizeof(nPuntos)); 
+    for(i = 0; i < nPuntos; i++){
+        auxP[i] = personasPunto[i];
+    }
+    int* auxR = (int*)malloc(sizeof(nRefugios));
+    for(i = 0; i < nRefugios; i++){
+        auxR[i] = capacidadRefugio[i];
+    }
+    int ptrP, ptrR, nRondas = 0;
+    
+    while(ptrP != nPuntos){
+        // simular las rondas y ver que pasa
+        for(i = 0; i < nBuses; i++){
+            // en una ronda asignamos cada bus a llevarse toda la gente que pueda del punto actual y mandarla al refugio actual
+            // se procede al siguiente punto/refugio cuando el actual se vacie/llene
+            if(capacidadBuses <= auxP[ptrP] && capacidadBuses <= auxR[ptrR]){
+                // este paso esta acotado por la capacidad del bus
+                auxP[ptrP] -= capacidadBuses;
+                auxR[ptrR] -= capacidadBuses;
+            }
+            else if(auxP[ptrP] <= capacidadBuses && auxP[ptrP] <= auxR[ptrR]){
+                // este paso esta acotado por la cantidad de gente en el punto
+                auxR[ptrR] -= auxP[ptrP];
+                auxP[ptrP] = 0;
+            }
+            else{
+                // este paso esta acotado por la capacidad del refugio
+                auxP[ptrP] -= auxR[ptrR];
+                auxR[ptrR] = 0;
+            }
+            if(auxP[ptrP] == 0){
+                // si pasa esto, terminamos de revisar el punto actual
+                ptrP++;
+                if (ptrP == nPuntos){
+                    // si pasa esto, terminamos de evacuar a todo el mundo
+                    break;
+                }
+            }
+            if(auxR[ptrR] == 0){
+                // si pasa esto, el refugio actual se lleno
+                ptrR++;
+                if (ptrR == nRefugios){
+                    // si pasa esto, hay problemas en la instancia
+                    printf("Hay mas gente a ser rescatada que espacio en los refugios. Lamentablemente, este programa no esta autorizado a realizar elecciones moralmente complicadas. Abortando...\n");
+                    printf("ERROR CODE 3M1Y4: library header <utilitarianism.h> not imported\n")
+                    return 0;
+                }
+            }
+        }
+        nRondas++;
+    }
+    
+    printf("%d\n", nRondas);
+    
+    free(auxP);
+    free(auxR);
+    
+    int k;
+    
+    // X_ijbr: el bus b va desde el punto i hacia el refugio j en la ronda r
+    int**** X = (int****)malloc(sizeof(int***)*nPuntos);
+    for(i = 0; i < nPuntos; i++){
+        X[i] = (int***)malloc(sizeof(int**)*nRefugios);
+        for(j = 0; j < nRefugios; j++){
+            X[i][j] = (int**)malloc(sizeof(int*)*nBuses);
+            for(k = 0; k < nBuses; k++){
+                X[i][j][k] = (int*)calloc(nRondas, sizeof(int));
+            }
+        }
+    }
+    
     // test
     
+    int l;
     for(i = 0; i < nPuntos; i++){
         for(j = 0; j < nRefugios; j++){
-            printf("%d ", distanciasPuntoRefugio[i][j]);
+            for(k = 0; k < nBuses; k++){
+                for(l = 0; l < nRondas; l++){
+                    printf("%d ", X[i][j][k][l]);
+                }
+                printf("\n");
+            }
+            printf("\n");
         }
         printf("\n");
     }
