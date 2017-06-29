@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define True 1
+#define False 0
+
 int main(int argc, char* argv[]){
     
     // abrir el archivo con la instancia
@@ -9,6 +12,12 @@ int main(int argc, char* argv[]){
         printf("Este programa necesita recibir el nombre del archivo de la instancia como parametro (y nada mas!). Abortando...\n");
         return 0;
     }
+    
+    ///////////////////////////////////////////////////
+    //                                               //
+    //           LECTURA DE LA INSTANCIA             //
+    //                                               //
+    ///////////////////////////////////////////////////
     
     FILE* instancia = fopen(argv[1], "r");
     
@@ -87,7 +96,13 @@ int main(int argc, char* argv[]){
     // cleanup
     fclose(instancia);
     
-    // declarar variables de busqueda: matriz tetradimensional de tamanyo nPuntos * nRefugios * nBuses * nRondas
+    ///////////////////////////////////////////////////
+    //                                               //
+    //           OBTENER SOLUCION INICIAL            //
+    //                                               //
+    ///////////////////////////////////////////////////
+    
+    // declarar variables de busqueda: matriz tridimensional de tamanyo nPuntos * nRefugios * nBuses * nRondas
     // enfoque inicial: obtener cantidad de rondas desde la solucion trivial
     // idea: asignar ordenadamente buses a puntos y refugios para establecer una cota superior
     
@@ -96,15 +111,18 @@ int main(int argc, char* argv[]){
     for(i = 0; i < nPuntos; i++){
         auxP[i] = personasPunto[i];
     }
+    
     int* auxR = (int*)malloc(sizeof(nRefugios));
     for(i = 0; i < nRefugios; i++){
         auxR[i] = capacidadRefugio[i];
     }
-    int ptrP, ptrR, nRondas = 0;
+    
+    int ptrP = 0, ptrR = 0, nRondas = 0;
     
     while(ptrP != nPuntos){
         // simular las rondas y ver que pasa
         for(i = 0; i < nBuses; i++){
+            
             // en una ronda asignamos cada bus a llevarse toda la gente que pueda del punto actual y mandarla al refugio actual
             // se procede al siguiente punto/refugio cuando el actual se vacie/llene
             if(capacidadBuses <= auxP[ptrP] && capacidadBuses <= auxR[ptrR]){
@@ -112,6 +130,7 @@ int main(int argc, char* argv[]){
                 auxP[ptrP] -= capacidadBuses;
                 auxR[ptrR] -= capacidadBuses;
             }
+            
             else if(auxP[ptrP] <= capacidadBuses && auxP[ptrP] <= auxR[ptrR]){
                 // este paso esta acotado por la cantidad de gente en el punto
                 auxR[ptrR] -= auxP[ptrP];
@@ -122,6 +141,7 @@ int main(int argc, char* argv[]){
                 auxP[ptrP] -= auxR[ptrR];
                 auxR[ptrR] = 0;
             }
+            
             if(auxP[ptrP] == 0){
                 // si pasa esto, terminamos de revisar el punto actual
                 ptrP++;
@@ -130,13 +150,14 @@ int main(int argc, char* argv[]){
                     break;
                 }
             }
+            
             if(auxR[ptrR] == 0){
                 // si pasa esto, el refugio actual se lleno
                 ptrR++;
                 if (ptrR == nRefugios){
                     // si pasa esto, hay problemas en la instancia
                     printf("Hay mas gente a ser rescatada que espacio en los refugios. Lamentablemente, este programa no esta autorizado a realizar elecciones moralmente complicadas. Abortando...\n");
-                    printf("ERROR CODE 3M1Y4: library header <utilitarianism.h> not imported\n")
+                    printf("ERROR CODE 3M1Y4: library header <utilitarianism.h> not imported\n");
                     return 0;
                 }
             }
@@ -144,37 +165,67 @@ int main(int argc, char* argv[]){
         nRondas++;
     }
     
-    printf("%d\n", nRondas);
+    printf("La solucion trivial dio una cota maxima de %d rondas.\n", nRondas);
     
     free(auxP);
     free(auxR);
+
+    ///////////////////////////////////////////////////
+    //                                               //
+    //             DECLARAR VARIABLES                //
+    //                                               //
+    ///////////////////////////////////////////////////
     
-    int k;
-    
-    // X_ijbr: el bus b va desde el punto i hacia el refugio j en la ronda r
-    int**** X = (int****)malloc(sizeof(int***)*nPuntos);
-    for(i = 0; i < nPuntos; i++){
-        X[i] = (int***)malloc(sizeof(int**)*nRefugios);
-        for(j = 0; j < nRefugios; j++){
-            X[i][j] = (int**)malloc(sizeof(int*)*nBuses);
-            for(k = 0; k < nBuses; k++){
-                X[i][j][k] = (int*)calloc(nRondas, sizeof(int));
-            }
+    // cambio en el modelo con respecto al paper
+    // M_rb: en la ronda r el bus b hara el movimiento m, m \in [0, nPuntos*nRefugios] (0 representa no hacer nada)
+    int** M = (int**)malloc(sizeof(int*)*nRondas);
+    for(i = 0; i < nRondas; i++){
+        M[i] = (int*)calloc(nBuses, sizeof(int));
         }
+        
+    // la cantidad de variables pasa a ser nRondas * nBuses
+    // el espacio de busqueda se mantiene ligeramente igual
+    // como fuerzo a cada bus en cada ronda a tomar un solo movimiento, la restriccion 5 del paper se cumple siempre
+    
+    // una segunda copia para cuando encuentre un optimo
+    // cuando haya una opcion cuya funcion objetivo sea mejor que el optimo, vuelco el contenido de las variables aca
+    int** optimo = (int**)malloc(sizeof(int*)*nRondas);
+    for(i = 0; i < nRondas; i++){
+        M[i] = (int*)calloc(nBuses, sizeof(int));
+        }
+    
+    // y dejo el objetivo listo
+    
+    int objetivo = 2147483647; // valor maximo para un entero de 4 bytes
+    
+    ///////////////////////////////////////////////////
+    //                                               //
+    //                  RESOLUCION                   //
+    //                                               //
+    ///////////////////////////////////////////////////
+    
+    // esta cosa es un backtracking con seleccion inteligente de que hacer a continuacion
+    // la base es la misma:
+    // -> revisar dominio de la variable
+    // -> eliminar valores que choquen con una variable anterior
+    // -> si no quedan valores en el dominio, volver
+    // -> de lo contrario, instanciar la variable con cada valor ordenadamente
+    // el RFLA se agrega en la revision del dominio, mirando variables futuras y manteniendo arcoconsistencia
+
+    int terminar = False; // i wish this was python
+    while (terminar == False){
+        terminar = True;
     }
     
-    // test
+    ///////////////////////////////////////////////////
+    //                                               //
+    //                   TESTING                     //
+    //                                               //
+    ///////////////////////////////////////////////////
     
-    int l;
-    for(i = 0; i < nPuntos; i++){
-        for(j = 0; j < nRefugios; j++){
-            for(k = 0; k < nBuses; k++){
-                for(l = 0; l < nRondas; l++){
-                    printf("%d ", X[i][j][k][l]);
-                }
-                printf("\n");
-            }
-            printf("\n");
+    for(i = 0; i < nRondas; i++){
+        for(j = 0; j < nBuses; j++){
+            printf("%d ", M[i][j]);
         }
         printf("\n");
     }
