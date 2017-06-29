@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "list.h"
 
 #define True 1
 #define False 0
@@ -211,7 +212,7 @@ int main(int argc, char* argv[]){
     // -> si no quedan valores en el dominio, volver
     // -> de lo contrario, instanciar la variable con cada valor ordenadamente
     // el RFLA se agrega en la revision del dominio, mirando variables futuras y manteniendo arcoconsistencia
-
+    
     int terminar = False; // i wish this was python
     while (terminar == False){
         terminar = True;
