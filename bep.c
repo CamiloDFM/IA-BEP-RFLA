@@ -37,7 +37,7 @@ int main(int argc, char* argv[]){
     fscanf(instancia, "%d: ", &nEstaciones);
     int* busesEstacion = (int*)malloc(sizeof(int)*nEstaciones);
     // busesEstacion[i]: cantidad de buses que parten en la estacion i
-    for(i = 0; i < nEstaciones; i++){
+    for (i = 0; i < nEstaciones; i++){
         fscanf(instancia, "%d", &(busesEstacion[i]));
     }
     
@@ -48,7 +48,7 @@ int main(int argc, char* argv[]){
     fscanf(instancia, "\n%d: %d: ", &nPuntos, &personasTotales);
     int* personasPunto = (int*)malloc(sizeof(int)*nPuntos);
     // personasPunto[i]: cantidad de personas a recoger en el punto i
-    for(i = 0; i < nPuntos; i++){
+    for (i = 0; i < nPuntos; i++){
         fscanf(instancia, "%d", &(personasPunto[i]));
     }
     
@@ -59,7 +59,7 @@ int main(int argc, char* argv[]){
     fscanf(instancia, "\n%d: %d: ", &nRefugios, &capacidadTotal);
     int* capacidadRefugio = (int*)malloc(sizeof(int)*nRefugios);
     // capacidadRefugio[i]: capacidad máxima del refugio i
-    for(i = 0; i < nRefugios; i++){
+    for (i = 0; i < nRefugios; i++){
         fscanf(instancia, "%d", &(capacidadRefugio[i]));
     }
     
@@ -67,29 +67,29 @@ int main(int argc, char* argv[]){
     
     // distancias entre estaciones y puntos
     int** distanciasEstacionPunto = (int**)malloc(sizeof(int*)*nEstaciones);
-    for(i = 0; i < nEstaciones; i++){
+    for (i = 0; i < nEstaciones; i++){
         distanciasEstacionPunto[i] = (int*)malloc(sizeof(int)*nPuntos);
     } 
     // distanciasEstacionPunto[i][j]: distancia entre la estacion inicial i y el punto de recogida j
     
     int j, skip;
-    for(i = 0; i < nEstaciones; i++){
+    for (i = 0; i < nEstaciones; i++){
         fscanf(instancia, "%d: ", &skip);
-        for(j = 0; j < nPuntos; j++){
+        for (j = 0; j < nPuntos; j++){
             fscanf(instancia, "%d", &(distanciasEstacionPunto[i][j]));
         }
     }
     
     // distancias entre puntos y refugios
     int** distanciasPuntoRefugio = (int**)malloc(sizeof(int*)*nPuntos);
-    for(i = 0; i < nPuntos; i++){
+    for (i = 0; i < nPuntos; i++){
         distanciasPuntoRefugio[i] = (int*)malloc(sizeof(int)*nRefugios);
     } 
     // distanciasPuntoRefugio[i][j]: distancia entre el punto de recogida i y el refugio j
 
-    for(i = 0; i < nPuntos; i++){
+    for (i = 0; i < nPuntos; i++){
         fscanf(instancia, "%d: ", &skip);
-        for(j = 0; j < nRefugios; j++){
+        for (j = 0; j < nRefugios; j++){
             fscanf(instancia, "%d", &(distanciasPuntoRefugio[i][j]));
         }
     }
@@ -109,41 +109,41 @@ int main(int argc, char* argv[]){
     
     // copiar arreglos de puntos y refugios para trabajar con una copia local
     int* auxP = (int*)malloc(sizeof(nPuntos)); 
-    for(i = 0; i < nPuntos; i++){
+    for (i = 0; i < nPuntos; i++){
         auxP[i] = personasPunto[i];
     }
     
     int* auxR = (int*)malloc(sizeof(nRefugios));
-    for(i = 0; i < nRefugios; i++){
+    for (i = 0; i < nRefugios; i++){
         auxR[i] = capacidadRefugio[i];
     }
     
     int ptrP = 0, ptrR = 0, nRondas = 0;
     
-    while(ptrP != nPuntos){
+    while (ptrP != nPuntos){
         // simular las rondas y ver que pasa
-        for(i = 0; i < nBuses; i++){
+        for (i = 0; i < nBuses; i++){
             
             // en una ronda asignamos cada bus a llevarse toda la gente que pueda del punto actual y mandarla al refugio actual
             // se procede al siguiente punto/refugio cuando el actual se vacie/llene
-            if(capacidadBuses <= auxP[ptrP] && capacidadBuses <= auxR[ptrR]){
+            if (capacidadBuses <= auxP[ptrP] && capacidadBuses <= auxR[ptrR]){
                 // este paso esta acotado por la capacidad del bus
                 auxP[ptrP] -= capacidadBuses;
                 auxR[ptrR] -= capacidadBuses;
             }
             
-            else if(auxP[ptrP] <= capacidadBuses && auxP[ptrP] <= auxR[ptrR]){
+            else if (auxP[ptrP] <= capacidadBuses && auxP[ptrP] <= auxR[ptrR]){
                 // este paso esta acotado por la cantidad de gente en el punto
                 auxR[ptrR] -= auxP[ptrP];
                 auxP[ptrP] = 0;
             }
-            else{
+            else {
                 // este paso esta acotado por la capacidad del refugio
                 auxP[ptrP] -= auxR[ptrR];
                 auxR[ptrR] = 0;
             }
             
-            if(auxP[ptrP] == 0){
+            if (auxP[ptrP] == 0){
                 // si pasa esto, terminamos de revisar el punto actual
                 ptrP++;
                 if (ptrP == nPuntos){
@@ -152,7 +152,7 @@ int main(int argc, char* argv[]){
                 }
             }
             
-            if(auxR[ptrR] == 0){
+            if (auxR[ptrR] == 0){
                 // si pasa esto, el refugio actual se lleno
                 ptrR++;
                 if (ptrR == nRefugios){
@@ -180,9 +180,9 @@ int main(int argc, char* argv[]){
     // cambio en el modelo con respecto al paper
     // M_rb: en la ronda r el bus b hara el movimiento m, m \in [0, nPuntos*nRefugios] (0 representa no hacer nada)
     int** M = (int**)malloc(sizeof(int*)*nRondas);
-    for(i = 0; i < nRondas; i++){
+    for (i = 0; i < nRondas; i++){
         M[i] = (int*)calloc(nBuses, sizeof(int));
-        }
+    }    
         
     // la cantidad de variables pasa a ser nRondas * nBuses
     // el espacio de busqueda se mantiene ligeramente igual
@@ -190,14 +190,14 @@ int main(int argc, char* argv[]){
     
     // una segunda copia para cuando encuentre un optimo
     // cuando haya una opcion cuya funcion objetivo sea mejor que el optimo, vuelco el contenido de las variables aca
-    int** optimo = (int**)malloc(sizeof(int*)*nRondas);
-    for(i = 0; i < nRondas; i++){
-        M[i] = (int*)calloc(nBuses, sizeof(int));
-        }
+    int** movimientosOptimos = (int**)malloc(sizeof(int*)*nRondas);
+    for (i = 0; i < nRondas; i++){
+        movimientosOptimos[i] = (int*)calloc(nBuses, sizeof(int));
+    }
     
     // y dejo el objetivo listo
     
-    int objetivo = 2147483647; // valor maximo para un entero de 4 bytes
+    int funcionObjetivo = 2147483647; // valor maximo para un entero de 4 bytes
     
     ///////////////////////////////////////////////////
     //                                               //
@@ -213,8 +213,106 @@ int main(int argc, char* argv[]){
     // -> de lo contrario, instanciar la variable con cada valor ordenadamente
     // el RFLA se agrega en la revision del dominio, mirando variables futuras y manteniendo arcoconsistencia
     
-    int terminar = False; // i wish this was python
-    while (terminar == False){
+    int rondaActual = 0, busActual = 0;
+    list* dominioActual;
+    // crear dominios para cada variable - matriz no inicializada
+    list*** dominios = (list***)malloc(sizeof(list**)*nRondas);
+    for (i = 0; i < nRondas; i++){
+        dominios[i] = (list**)malloc(sizeof(list*)*nBuses);
+    }
+    M[rondaActual][busActual] = 0;
+    dominios[rondaActual][busActual] = createList();
+    for (i = 0; i <= nPuntos * nRefugios; i++){
+        appendElement(dominios[rondaActual][busActual], i);
+    }
+    
+    int terminar = False, volver = False; // i wish this was python
+    int objetivo, sumaParcial, k;
+    
+    while (terminar == False){       
+        if (volver){
+            // recien se hizo backtrack, tomar otro elemento del dominio y seguir
+            volver = False;
+        }
+        else {
+            // aumentar variable
+            busActual++;
+            if (busActual == nBuses){
+                busActual = 0;
+                rondaActual++;
+            }
+            
+            // revisar dominio de la variable
+            
+            // crear dominio limpio
+            dominios[rondaActual][busActual] = createList();
+            
+            // recuperar dominio - legibilidad
+            dominioActual = dominios[rondaActual][busActual];
+            
+            // revisar restricciones por cada elemento del dominio - si una no se cumple, no se agrega a la lista
+            for (i = 0; i < nPuntos * nRefugios; i++){
+                if (i != 0){ // las restricciones 6 y 8 no aplican si el movimiento es detenerse - si el movimiento actual no es una detencion:
+                    // restriccion 6 del paper: si un bus se detiene en una ronda, no puede continuar en la siguiente
+                    if ((rondaActual != 0) && (M[rondaActual -1][busActual] == 0)){ // si no es la primera ronda y el movimiento anterior si era una detencion
+                        continue; // entonces hay un tour cortado - no agregar el valor al dominio
+                    }
+                    // restriccion 8 del paper: no puede superarse la capacidad de los refugios
+                    // notar que los archivos de las instancias cumplen el supuesto del paper: las cantidades de evacuados y las capacidades de los refugios son multiplos enteros de las capacidades de los buses, por lo que se cuentan los viajes
+                    objetivo = ((i - 1) / nPuntos); // analizar a que refugio se esta llevando gente
+                    sumaParcial = 0;
+                    for (j = 0; j < rondaActual; j++){ // por cada ronda anterior
+                        for (k = 0; k < nBuses; k++){ // por cada bus posible
+                            if ((M[j][k] - 1) / nPuntos == objetivo){ // si es que ese movimiento implico el refugio objetivo
+                                sumaParcial += capacidadBuses; // sumarle un bus lleno de gente al conteo parcial
+                            }
+                        }
+                    }
+                    if (sumaParcial + capacidadBuses > capacidadRefugio[objetivo]){ // si agregarle otro bus lleno de gente al refugio lo deja por sobre su capacidad maxima
+                        continue; // no agregar el valor al dominio
+                    }
+                }
+                if (busActual == nBuses - 1 && rondaActual == nRondas - 1) { // la restriccion 7 no se puede verificar si no se esta instanciando la ultima variable, pues provoca falsos fallos en instanciaciones incompletas
+                    // restriccion 7 del paper: al final, toda la gente esperando en los puntos debe haber sido evacuada
+                    objetivo = ((i - 1) % nPuntos); // analizar desde que punto se esta llevando gente
+                    sumaParcial = 0;
+                    for (j = 0; j < nRondas; j++){ // por cada ronda efectuada 
+                        for (k = 0; k < nBuses; k++){ // por cada bus posible
+                            if ((M[j][k] - 1) % nPuntos == objetivo){ // si es que ese movimiento implico el punto objetivo
+                                sumaParcial += capacidadBuses; // sumarle un bus lleno al conteo
+                            }
+                        }
+                    }
+                    if (sumaParcial + capacidadBuses < personasPunto[objetivo]){ // si al sacarle otro bus lleno de gente al punto no se ha agotado
+                        continue; // no agregar el valor al dominio, pues no se rescato a todo el mundo
+                    }
+                }
+                appendElement(dominioActual, i); // agregar valor al dominio
+            }
+        }
+        
+        if (dominioActual -> len == 0){
+            volver = True;
+            // disminuir variable
+            busActual -= 1;
+            if (busActual < 0){
+                busActual = 0;
+                rondaActual -= 1;
+            }
+            // el elemento del dominio que se intento usar es el primero
+            // como provoco un fallo, lo saco
+            dominioActual = dominios[rondaActual][busActual];
+            deleteElement(dominioActual, 0);
+            // instanciar otro elemento
+            if (dominioActual -> len == 0){
+                // oh boy
+                // dejar que caiga normalmente
+                continue;
+            }
+        }
+        M[rondaActual][busActual] = at(dominioActual, 0);
+        
+        
         terminar = True;
     }
     
@@ -224,11 +322,15 @@ int main(int argc, char* argv[]){
     //                                               //
     ///////////////////////////////////////////////////
     
+    int N[3][4] = {{1, 4, 8, 6}, {3, 5, 5, 0}, {0, 7, 0, 0}};    
+    
     for(i = 0; i < nRondas; i++){
+        printf("En la ronda %d:\n", i + 1);
         for(j = 0; j < nBuses; j++){
-            printf("%d ", M[i][j]);
+            if (N[i][j] != 0){
+                printf("    Bus %d: Punto %d -> Refugio %d\n", j + 1, ((N[i][j] - 1) % nPuntos) + 1, ((N[i][j] - 1) / nPuntos) + 1);
+            }
         }
-        printf("\n");
     }
     
 	return 0;
