@@ -227,10 +227,16 @@ int main(int argc, char* argv[]){
     }
     
     int terminar = False, volver = False; // i wish this was python
-    int objetivo, sumaParcial, k;
+    int objetivo, sumaParcial, k, h, filtrar;
     
-    while (terminar == False){       
+    printf("partiendo algoritmo con variable R_%dB_%d instanciada en 0 y su dominio completo\n", rondaActual, busActual);
+    
+    while (terminar == False){        
+        
         if (volver){
+            
+            printf("se tomara otro valor del dominio para R_%dB_%d y se seguira\n", rondaActual, busActual);
+            
             // recien se hizo backtrack, tomar otro elemento del dominio y seguir
             volver = False;
         }
@@ -242,26 +248,30 @@ int main(int argc, char* argv[]){
                 rondaActual++;
             }
             
+            printf("trabajando una variable nueva (R_%dB_%d), crear dominio\n", rondaActual, busActual);
+            
             // revisar dominio de la variable
             
             // crear dominio limpio
             dominios[rondaActual][busActual] = createList();
-            
-            // recuperar dominio - legibilidad
-            dominioActual = dominios[rondaActual][busActual];
+            dominioActual = dominios[rondaActual][busActual]; // legibilidad
             
             // revisar restricciones por cada elemento del dominio - si una no se cumple, no se agrega a la lista
-            for (i = 0; i < nPuntos * nRefugios; i++){
-                if (i != 0){ // las restricciones 6 y 8 no aplican si el movimiento es detenerse - si el movimiento actual no es una detencion:
+            for (i = 0; i <= nPuntos * nRefugios; i++){
+                printf("  revisando elemento %d del dominio\n", i);
+                if (i != 0){ // si el movimiento actual no es una detencion:
                     // restriccion 6 del paper: si un bus se detiene en una ronda, no puede continuar en la siguiente
                     if ((rondaActual != 0) && (M[rondaActual -1][busActual] == 0)){ // si no es la primera ronda y el movimiento anterior si era una detencion
+                        printf("   elemento filtrado por rest 6 - tour no conexo\n");
                         continue; // entonces hay un tour cortado - no agregar el valor al dominio
                     }
+                    if (M[0][0] == 1 && M[0][1] == 2 && M[1][0] == 2)
+                        printf("0000000000000000000000000000000000000000000000000000\n0                       check                      0\n0000000000000000000000000000000000000000000000000000\n");
                     // restriccion 8 del paper: no puede superarse la capacidad de los refugios
                     // notar que los archivos de las instancias cumplen el supuesto del paper: las cantidades de evacuados y las capacidades de los refugios son multiplos enteros de las capacidades de los buses, por lo que se cuentan los viajes
                     objetivo = ((i - 1) / nPuntos); // analizar a que refugio se esta llevando gente
                     sumaParcial = 0;
-                    for (j = 0; j < rondaActual; j++){ // por cada ronda anterior
+                    for (j = 0; j < nRondas; j++){ // por cada ronda anterior
                         for (k = 0; k < nBuses; k++){ // por cada bus posible
                             if ((M[j][k] - 1) / nPuntos == objetivo){ // si es que ese movimiento implico el refugio objetivo
                                 sumaParcial += capacidadBuses; // sumarle un bus lleno de gente al conteo parcial
@@ -269,51 +279,89 @@ int main(int argc, char* argv[]){
                         }
                     }
                     if (sumaParcial + capacidadBuses > capacidadRefugio[objetivo]){ // si agregarle otro bus lleno de gente al refugio lo deja por sobre su capacidad maxima
+                        printf("   elemento filtrado por rest 8 - refugio desbordado\n");
                         continue; // no agregar el valor al dominio
                     }
                 }
                 if (busActual == nBuses - 1 && rondaActual == nRondas - 1) { // la restriccion 7 no se puede verificar si no se esta instanciando la ultima variable, pues provoca falsos fallos en instanciaciones incompletas
                     // restriccion 7 del paper: al final, toda la gente esperando en los puntos debe haber sido evacuada
+                    filtrar = False;
                     objetivo = ((i - 1) % nPuntos); // analizar desde que punto se esta llevando gente
-                    sumaParcial = 0;
-                    for (j = 0; j < nRondas; j++){ // por cada ronda efectuada 
-                        for (k = 0; k < nBuses; k++){ // por cada bus posible
-                            if ((M[j][k] - 1) % nPuntos == objetivo){ // si es que ese movimiento implico el punto objetivo
-                                sumaParcial += capacidadBuses; // sumarle un bus lleno al conteo
+                    for (h = 0; h < nPuntos; h++){
+                        sumaParcial = 0;
+                        for (j = 0; j < nRondas; j++){ // por cada ronda efectuada 
+                            for (k = 0; k < nBuses; k++){ // por cada bus posible
+                                if ((M[j][k] - 1) % nPuntos == objetivo && M[j][k] != 0){ // si es que ese movimiento implico el punto objetivo
+                                    sumaParcial += capacidadBuses; // sumarle un bus lleno al conteo
+                                }
+                            }
+                        }
+                        if (h == objetivo && i != 0){ // esto se calcula si estamos mirando el objetivo o si hay un objetivo
+                            if (sumaParcial + capacidadBuses < personasPunto[h]){ // si al sacarle otro bus lleno de gente al punto no se ha agotado
+                                filtrar = True; // no agregar el valor al dominio, pues no se rescato a todo el mundo
+                            }
+                        }
+                        else { // para todos los demas, es simplemente si no se ha salvado a todo el mundo
+                            if (sumaParcial < personasPunto[h]){
+                                filtrar = True;
                             }
                         }
                     }
-                    if (sumaParcial + capacidadBuses < personasPunto[objetivo]){ // si al sacarle otro bus lleno de gente al punto no se ha agotado
-                        continue; // no agregar el valor al dominio, pues no se rescato a todo el mundo
+                    if (filtrar){
+                        printf("   elemento filtrado por rest 7 - gente no salvada\n");
+                        continue;
                     }
                 }
                 appendElement(dominioActual, i); // agregar valor al dominio
+                printf("   elemento agregado\n");
             }
+            
+            printf("  dominio de la variable: { ");
+            node* curr;
+            for (curr = dominioActual -> first; curr != NULL; curr = curr -> next){
+                printf("%d, ", curr -> value);
+            }
+            printf("}\n");
+            
         }
         
         if (dominioActual -> len == 0){
+            printf("  el dominio de la variable actual esta vacio, volviendo...\n");
             volver = True;
+            // limpiar memoria
+            deleteList(dominioActual);
+            // limpiar variable
+            M[rondaActual][busActual] = 0;
             // disminuir variable
             busActual -= 1;
             if (busActual < 0){
-                busActual = 0;
+                busActual = nBuses - 1;
                 rondaActual -= 1;
             }
+            printf("volviendo a trabajar con la variable R_%dB_%d\n", rondaActual, busActual);
             // el elemento del dominio que se intento usar es el primero
             // como provoco un fallo, lo saco
             dominioActual = dominios[rondaActual][busActual];
             deleteElement(dominioActual, 0);
             // instanciar otro elemento
-            if (dominioActual -> len == 0){
-                // oh boy
-                // dejar que caiga normalmente
-                continue;
+        }
+        
+        if (dominioActual -> len != 0){ // si el dominio de la variable anterior es vacia, se encontrara el problema en la siguiente iteracion
+            M[rondaActual][busActual] = at(dominioActual, 0); // instanciar variable con primer elemento del dominio
+            printf("  variable instanciada con valor %d\n", M[rondaActual][busActual]);
+            if (busActual == nBuses - 1 && rondaActual == nRondas - 1){ // si estamos mirando la ultima variable
+                volver = True; // no crear una nueva en la siguiente iteracion, solo mirar mas elementos del dominio
+                printf("  observando variable final\n");
+                // TODO: calcular aca el valor de la FO
+                printf("  Espere un momento, estamos calculando la funcion objetivo...\n");
+                // ahora se elimina el valor del dominio recien usado y se sigue
+                deleteElement(dominioActual, 0);
             }
         }
-        M[rondaActual][busActual] = at(dominioActual, 0);
-        
-        
-        terminar = True;
+        else if (busActual == 0 && rondaActual == 0){ // pero si el dominio es vacio, y ademas estamos en la primera variable
+            terminar = True; // entonces terminamos de revisar todo el espacio de busqueda
+            printf("la revision del EB ha terminado\n");
+        }
     }
     
     ///////////////////////////////////////////////////
