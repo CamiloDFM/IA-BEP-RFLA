@@ -5,31 +5,60 @@
 #define True 1
 #define False 0
 
-int restriccion6Global(int** matriz, int nRondas, int nBuses){
-    int i, j, terminado;
-    for (j = 0; j < nBuses; j++){
-        terminado = False;
+int restriccion6(int** matriz, int rondaActual, int busActual, int valorInstanciado){
+    // chequea cumplimiento de la restriccion 6
+    // restriccion 6: si un itinerario termina, no se puede reiniciar
+    if (valorInstanciado == 0 || rondaActual == 0){
+        return True; // instanciar con 0 nunca entrega problemas con la rest6, y la primera ronda puede tener cualquier valor
+    }
+    else if (matriz[rondaActual - 1][busActual] == 0){
+        return False;
+    }
+    else {
+        return True;
+    }
+}
+
+int restriccion7(int** matriz, int* personasPunto, int nRondas, int nBuses, int nPuntos, int capacidadBuses, int valorInstanciado){
+    int puntoOrigen = ((valorInstanciado - 1) % nPuntos);
+    int i, j, punto, sumaParcial;
+    for (punto = 0; punto < nPuntos; punto++){
+        sumaParcial = 0;
         for (i = 0; i < nRondas; i++){
-            if (matriz[i][j] == 0){
-                terminado = True;
+            for (j = 0; j < nBuses; j++){
+                if (matriz[i][j] != 0 && (matriz[i][j] - 1) % nPuntos == punto){
+                    sumaParcial += capacidadBuses;
+                }
             }
-            else if (terminado){
-                return False;
-            }
+        }
+        if (valorInstanciado != 0 && puntoOrigen == punto){
+            sumaParcial += capacidadBuses;
+        }
+        if (sumaParcial < personasPunto[punto]){
+            return False;
         }
     }
     return True;
 }
 
-int restriccion6Local(int** matriz, int nRondas, int busActual){
-    int i, terminado = False;
+int restriccion8(int** matriz, int* capacidadRefugio, int nRondas, int nBuses, int nPuntos, int capacidadBuses, int rondaActual, int busActual, int valorInstanciado){
+    // chequea cumplimiento de la restriccion 8
+    // restriccion 8: no se puede sobrepasar la capacidad de un refugio
+    if (valorInstanciado == 0){
+        return True;
+    }
+    int refugioDestino = (valorInstanciado - 1) / nPuntos;
+    int sumaParcial = 0;
+    int i, j;
     for (i = 0; i < nRondas; i++){
-        if (matriz[i][busActual] == 0){
-            terminado = True;
+        for (j = 0; j < nBuses; j++){
+            if ((matriz[i][j] - 1) / nPuntos == refugioDestino && matriz[i][j] != 0){
+                sumaParcial += capacidadBuses; // sumar un bus por cada movimiento en la matriz que involucre el refugio de destino
+            }
         }
-        else if (terminado){
-            return False;
-        }
+    }
+    if (sumaParcial + capacidadBuses > capacidadRefugio[refugioDestino]){
+        return False; // la restriccion se viola si el movimiento actual sobrepasa la capacidad del refugio
     }
     return True;
 }
@@ -256,7 +285,7 @@ int main(int argc, char* argv[]){
     }
     
     int terminar = False, volver = False; // i wish this was python
-    int sumaParcial, k, h, filtrar, sumaBus, tiempoBusMaximo, puntoOrigen, refugioDestino, refugioAnterior, estacionActual, busesTotales, iteraciones = 0;
+    int k, sumaBus, tiempoBusMaximo, puntoOrigen, refugioDestino, refugioAnterior, estacionActual, busesTotales, iteraciones = 0;
     
     while (terminar == False){        
         
@@ -298,53 +327,16 @@ int main(int argc, char* argv[]){
             
             // revisar restricciones por cada elemento del dominio - si una no se cumple, no se agrega a la lista
             for (i = 0; i <= nPuntos * nRefugios; i++){
-                if (i != 0){ // si el movimiento actual no es una detencion:
-                    // restriccion 6 del paper: si un bus se detiene en una ronda, no puede continuar en la siguiente
-                    if ((rondaActual != 0) && (M[rondaActual - 1][busActual] == 0)){ // si no es la primera ronda y el movimiento anterior si era una detencion
-                        continue; // entonces hay un tour cortado - no agregar el valor al dominio
-                    }
-
-                    // restriccion 8 del paper: no puede superarse la capacidad de los refugios
-                    // notar que los archivos de las instancias cumplen el supuesto del paper: las cantidades de evacuados y las capacidades de los refugios son multiplos enteros de las capacidades de los buses, por lo que se cuentan los viajes
-                    refugioDestino = ((i - 1) / nPuntos); // analizar a que refugio se esta llevando gente
-                    sumaParcial = 0;
-                    for (j = 0; j < nRondas; j++){ // por cada ronda anterior
-                        for (k = 0; k < nBuses; k++){ // por cada bus posible
-                            if ((M[j][k] - 1) / nPuntos == refugioDestino && M[j][k] != 0){ // si es que ese movimiento implico el refugio destino
-                                sumaParcial += capacidadBuses; // sumarle un bus lleno de gente al conteo parcial
-                            }
-                        }
-                    }
-                    if (sumaParcial + capacidadBuses > capacidadRefugio[refugioDestino]){ // si agregarle otro bus lleno de gente al refugio lo deja por sobre su capacidad maxima
-                        continue; // no agregar el valor al dominio
-                    }
+                if (!restriccion6(M, rondaActual, busActual, i)){
+                    continue;
                 }
                 if (busActual == nBuses - 1 && rondaActual == nRondas - 1) { // la restriccion 7 no se puede verificar si no se esta instanciando la ultima variable, pues provoca falsos fallos en instanciaciones incompletas
-                    // restriccion 7 del paper: al final, toda la gente esperando en los puntos debe haber sido evacuada
-                    filtrar = False;
-                    puntoOrigen = ((i - 1) % nPuntos); // analizar desde que punto se esta llevando gente
-                    
-                    for (h = 0; h < nPuntos; h++){
-                        sumaParcial = 0;
-                        for (j = 0; j < nRondas; j++){ // por cada ronda efectiada
-                            for (k = 0; k < nBuses; k++){ // por cada bus posible
-                                if (M[j][k] != 0 && (M[j][k] - 1) % nPuntos == h){ // si ese movimiento implico el punto de origen
-                                    sumaParcial += capacidadBuses; // sumarle un bus lleno de gente al conteo
-                                }
-                            }
-                        }
-                        if (i != 0 && puntoOrigen == h){ // si el punto actual es el origen
-                            sumaParcial += capacidadBuses; // sumarle otro bus lleno de gente al conteo
-                        }
-                        if(sumaParcial < personasPunto[h]){ // si el conteo me dice que no he evacuado a todas las personas en algun punto...
-                            filtrar = True;
-                            break;
-                        }
-                    }
-                    
-                    if (filtrar){
+                    if (!restriccion7(M, personasPunto, nRondas, nBuses, nPuntos, capacidadBuses, i)){
                         continue;
                     }
+                }
+                if (!restriccion8(M, capacidadRefugio, nRondas, nBuses, nPuntos, capacidadBuses, rondaActual, busActual, i)){
+                    continue;
                 }
                 appendElement(dominioActual, i); // agregar valor al dominio
             }
