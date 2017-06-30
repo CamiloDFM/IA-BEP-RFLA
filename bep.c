@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "list.h"
 
 #define True 1
@@ -239,6 +240,12 @@ int main(int argc, char* argv[]){
     //                                               //
     ///////////////////////////////////////////////////
     
+    // se considera que obtener la solucion inicial es trivial en comparacion con la resolucion real
+    // y que desde declarar variables se trabaja con la solucion real
+    // por lo tanto, aqui empiezo a tomar el tiempo
+    
+    clock_t inicio = clock();
+    
     // cambio en el modelo con respecto al paper
     // M_rb: en la ronda r el bus b hara el movimiento m, m \in [0, nPuntos*nRefugios] (0 representa no hacer nada)
     int** M = (int**)malloc(sizeof(int*)*nRondas);
@@ -299,24 +306,21 @@ int main(int argc, char* argv[]){
     int k, h, sumaBus, tiempoBusMaximo, puntoOrigen, refugioDestino, refugioAnterior, estacionActual, busesTotales, iteraciones = 0, megaIteraciones = 0, posible = True;
     
     while (terminar == False){        
-        
         iteraciones++;
-        
-        if (iteraciones == 10000000){
+        if (iteraciones >= 10000000){
             printf("sigo funcionando\n");
             iteraciones = 0;
             megaIteraciones += 10;
-        }
-        
-        /*
-        printf("variable actual: R%dB%d, matriz tentativa:\n", rondaActual, busActual);
-        for(i = 0; i < nRondas; i++){
-            for (j = 0; j < nBuses; j++){
-                printf("%d ", M[i][j]);
+            if (megaIteraciones % 100 == 0){
+                printf("variable actual: R%dB%d, matriz tentativa:\n", rondaActual, busActual);
+                for(i = 0; i < nRondas; i++){
+                    for (j = 0; j < nBuses; j++){
+                        printf("%d ", M[i][j]);
+                    }
+                    printf("\n");
+                }
             }
-            printf("\n");
         }
-        */
         
         if (volver){
             // recien se hizo backtrack, tomar otro elemento del dominio y seguir
@@ -375,7 +379,6 @@ int main(int argc, char* argv[]){
                 MLA[rondaActual][busActual] = 0;
                 if (!posible){
                     posible = True;
-                    printf("FC anulo un dominio\n");
                     continue;
                 }
 
@@ -472,6 +475,16 @@ int main(int argc, char* argv[]){
     //                                               //
     ///////////////////////////////////////////////////
     
+    // aqui termino de medir el tiempo
+    
+    clock_t final = clock();
+    double tiempo = (double)(final - inicio) / CLOCKS_PER_SEC;
+    int horas, minutos;
+    double segundos;
+    horas = ((int)tiempo) / 3600;
+    minutos = (((int)tiempo) - horas*3600) / 60;
+    segundos = tiempo - ((double)horas*3600) - ((double)minutos*60);
+    
     printf("#################################\n\nSolucion final:\n");
     
     for(i = 0; i < nRondas; i++){
@@ -485,6 +498,7 @@ int main(int argc, char* argv[]){
     
     printf("Mayor distancia recorrida por un bus: %d unidades.\n", objetivoOptimo);
     printf("%d Miteraciones, %d iteraciones\n", megaIteraciones, iteraciones);
+    printf("Tiempo transcurrido: %d:%d:%f.\n", horas, minutos, segundos); 
     
 	return 0;
 }
