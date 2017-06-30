@@ -12,30 +12,34 @@ int restriccion6(int** matriz, int rondaActual, int busActual, int valorInstanci
         return True; // instanciar con 0 nunca entrega problemas con la rest6, y la primera ronda puede tener cualquier valor
     }
     else if (matriz[rondaActual - 1][busActual] == 0){
-        return False;
+        return False; // si el movimiento actual es un movimiento, el anterior no puede ser estar quieto
     }
     else {
         return True;
     }
 }
 
-int restriccion7(int** matriz, int* personasPunto, int nRondas, int nBuses, int nPuntos, int capacidadBuses, int valorInstanciado){
+int restriccion7(int** matriz, int* personasPunto, int nRondas, int nBuses, int nPuntos, int capacidadBuses, int rondaActual, int busActual, int valorInstanciado){
+    // chequea cumplimiento de la restriccion 7
+    // restriccion 7: no debe quedar gente en ningun refugio
     int puntoOrigen = ((valorInstanciado - 1) % nPuntos);
-    int i, j, punto, sumaParcial;
-    for (punto = 0; punto < nPuntos; punto++){
+    int i, j, punto, sumaParcial, instanciacionesFaltantes;
+    for (punto = 0; punto < nPuntos; punto++){ // para cada punto se recorre la matriz entera
         sumaParcial = 0;
         for (i = 0; i < nRondas; i++){
             for (j = 0; j < nBuses; j++){
                 if (matriz[i][j] != 0 && (matriz[i][j] - 1) % nPuntos == punto){
-                    sumaParcial += capacidadBuses;
+                    sumaParcial += capacidadBuses; // se cuenta cuanta gente salio en bus del punto
                 }
             }
         }
         if (valorInstanciado != 0 && puntoOrigen == punto){
-            sumaParcial += capacidadBuses;
+            sumaParcial += capacidadBuses; // se considera si el movimiento actual saca gente del punto
         }
-        if (sumaParcial < personasPunto[punto]){
-            return False;
+        instanciacionesFaltantes = (nRondas * nBuses) - (rondaActual * nBuses + busActual + 1);
+        if (sumaParcial + capacidadBuses * instanciacionesFaltantes < personasPunto[punto]){
+            return False; // y si no es mayor o igual que toda la gente que habia en principio, la solucion es invalida
+            // tambien sirve que a futuro todos los recursos se destinen a este punto
         }
     }
     return True;
@@ -253,6 +257,13 @@ int main(int argc, char* argv[]){
         movimientosOptimos[i] = (int*)calloc(nBuses, sizeof(int));
     }
     
+    // una tercera copia para trabajar tentativamente al revisar las variables futuras
+    // cada vez que actualice la original debo copiar los contenidos a esta
+    int** MLA = (int**)malloc(sizeof(int*)*nRondas);
+    for (i = 0; i < nRondas; i++){
+        MLA[i] = (int*)calloc(nBuses, sizeof(int));
+    }
+    
     // y dejo el objetivo listo
     
     int objetivoOptimo = 2147483647; // valor maximo para un entero de 4 bytes
@@ -285,7 +296,7 @@ int main(int argc, char* argv[]){
     }
     
     int terminar = False, volver = False; // i wish this was python
-    int k, sumaBus, tiempoBusMaximo, puntoOrigen, refugioDestino, refugioAnterior, estacionActual, busesTotales, iteraciones = 0;
+    int k, h, sumaBus, tiempoBusMaximo, puntoOrigen, refugioDestino, refugioAnterior, estacionActual, busesTotales, iteraciones = 0, megaIteraciones = 0, posible = True;
     
     while (terminar == False){        
         
@@ -294,6 +305,7 @@ int main(int argc, char* argv[]){
         if (iteraciones == 10000000){
             printf("sigo funcionando\n");
             iteraciones = 0;
+            megaIteraciones += 10;
         }
         
         /*
@@ -330,14 +342,43 @@ int main(int argc, char* argv[]){
                 if (!restriccion6(M, rondaActual, busActual, i)){
                     continue;
                 }
-                if (busActual == nBuses - 1 && rondaActual == nRondas - 1) { // la restriccion 7 no se puede verificar si no se esta instanciando la ultima variable, pues provoca falsos fallos en instanciaciones incompletas
-                    if (!restriccion7(M, personasPunto, nRondas, nBuses, nPuntos, capacidadBuses, i)){
-                        continue;
-                    }
+                if (!restriccion7(M, personasPunto, nRondas, nBuses, nPuntos, capacidadBuses, rondaActual, busActual, i)){
+                    continue;
                 }
                 if (!restriccion8(M, capacidadRefugio, nRondas, nBuses, nPuntos, capacidadBuses, rondaActual, busActual, i)){
                     continue;
                 }
+                
+                // si esta se cumple, revisar si todas las variables futuras tienen alguna instanciacion posible
+                
+                MLA[rondaActual][busActual] = i;
+                
+                for (j = rondaActual; j < nRondas; j++){
+                    for (k = 0; k < nBuses; k++){
+                        if ((j == rondaActual && k <= busActual)){
+                            continue;
+                        }
+                        for (h = 0; h <= nPuntos * nRefugios; h++){
+                            posible = False;
+                            if (restriccion6(MLA, j, k, h) &&
+                                restriccion7(MLA, personasPunto, nRondas, nBuses, nPuntos, capacidadBuses, rondaActual, busActual, h) &&
+                                restriccion8(MLA, capacidadRefugio, nRondas, nBuses, nPuntos, capacidadBuses, j, k, h)){
+                                posible = True;
+                                break;
+                            }
+                        }
+                        if (!posible){
+                            break;
+                        }
+                    }
+                }
+                MLA[rondaActual][busActual] = 0;
+                if (!posible){
+                    posible = True;
+                    printf("FC anulo un dominio\n");
+                    continue;
+                }
+
                 appendElement(dominioActual, i); // agregar valor al dominio
             }
         }
@@ -363,6 +404,7 @@ int main(int argc, char* argv[]){
         
         if (dominioActual -> len != 0){ // si el dominio de la variable anterior es vacia, se encontrara el problema en la siguiente iteracion
             M[rondaActual][busActual] = at(dominioActual, 0); // instanciar variable con primer elemento del dominio
+            MLA[rondaActual][busActual] = M[rondaActual][busActual];
             if (busActual == nBuses - 1 && rondaActual == nRondas - 1){ // si estamos mirando la ultima variable
                 volver = True; // no crear una nueva en la siguiente iteracion, solo mirar mas elementos del dominio
                 // calcular FO
@@ -442,6 +484,7 @@ int main(int argc, char* argv[]){
     }
     
     printf("Mayor distancia recorrida por un bus: %d unidades.\n", objetivoOptimo);
+    printf("%d Miteraciones, %d iteraciones\n", megaIteraciones, iteraciones);
     
 	return 0;
 }
