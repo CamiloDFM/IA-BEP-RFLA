@@ -7,6 +7,10 @@
 # designorar todos los directorios
 !*/
 
+# designorar el makefile
+
+!makefile
+
 # ignorar objetos
 *.o
 
