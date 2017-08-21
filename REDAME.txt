@@ -1,0 +1,19 @@
+Código fuente para la resolución del Bus Evacuation Problem mediante la técnica completa "Real Full Lookahead" - Camilo Pérez
+Código y repositorio disponibles en https://github.com/CamiloDFM/IA-BEP-RFLA.
+Clonar usando git@github.com:CamiloDFM/IA-BEP-RFLA.git si así se desea.
+
+Para ejecutar esta cosa, correr el makefile para compilar el código. Se encuentra separado en un programa principal y una librería de listas. Si el makefile no funciona (por algún motivo), basta con correr
+
+gcc -Wall bep.c list.c -o bep
+
+Debiese compilar sin warnings sobre Bash desde la caja. Si aparece algún warning, hay problemas.
+
+El programa funciona con un único argumento: el archivo de texto que contiene la instancia. Para correr el programa ya compilado sobre la instancia más pequeña adjunta, la línea se vería así:
+
+./bep InstanciasBEP/64-1-1-2-2.txt
+
+Los archivos de instancia distintos a los que venían con el problema son aquellos que se crearon para realizar pruebas sobre el programa. El número inicial es el tamaño del espacio de búsqueda, y el formato de los otros números es el mismo que el de las instancias entregadas.
+
+Trabajado sobre C en Ubuntu... técnicamente, el Bash de Ubuntu para Windows 10, pero funciona en un sistema Ubuntu nativo también. Sorprendentemente no se cayó nunca.
+
+Código terminado el 30-06-2017. Makefile y Readme agregados el día de la entrega, 21-08-2017.
